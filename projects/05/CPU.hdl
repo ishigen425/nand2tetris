@@ -1,0 +1,94 @@
+// This file is part of www.nand2tetris.org
+// and the book "The Elements of Computing Systems"
+// by Nisan and Schocken, MIT Press.
+// File name: projects/05/CPU.hdl
+
+/**
+ * The Hack CPU (Central Processing unit), consisting of an ALU,
+ * two registers named A and D, and a program counter named PC.
+ * The CPU is designed to fetch and execute instructions written in 
+ * the Hack machine language. In particular, functions as follows:
+ * Executes the inputted instruction according to the Hack machine 
+ * language specification. The D and A in the language specification
+ * refer to CPU-resident registers, while M refers to the external
+ * memory location addressed by A, i.e. to Memory[A]. The inM input 
+ * holds the value of this location. If the current instruction needs 
+ * to write a value to M, the value is placed in outM, the address 
+ * of the target location is placed in the addressM output, and the 
+ * writeM control bit is asserted. (When writeM==0, any value may 
+ * appear in outM). The outM and writeM outputs are combinational: 
+ * they are affected instantaneously by the execution of the current 
+ * instruction. The addressM and pc outputs are clocked: although they 
+ * are affected by the execution of the current instruction, they commit 
+ * to their new values only in the next time step. If reset==1 then the 
+ * CPU jumps to address 0 (i.e. pc is set to 0 in next time step) rather 
+ * than to the address resulting from executing the current instruction. 
+ */
+
+CHIP CPU {
+
+    IN  inM[16],         // M value input  (M = contents of RAM[A])
+        instruction[16], // Instruction for execution
+        reset;           // Signals whether to re-start the current
+                         // program (reset==1) or continue executing
+                         // the current program (reset==0).
+
+    OUT outM[16],        // M value output
+        writeM,          // Write to M? 
+        addressM[15],    // Address in data memory (of M)
+        pc[15];          // address of next instruction
+
+    PARTS:
+    // Put your code here:
+    // メモリから実行するHack命令を引っ張ってくる(フェッチ)
+    // プログラムカウンタで指されているアドレスのHack命令
+    // デコードと呼ばれいる部分を実装する
+
+    // A命令またはC命令のdest領域の1番目が1の場合、Aレジスタに設定する
+    Mux16(a=instruction,b=outalu1,sel=instruction[15],out=out1);
+    Not(in=instruction[15], out=aregjudge1);
+    Or(a=aregjudge1, b=instruction[5], out=aregjudge2);
+    ARegister(in=out1,load=aregjudge2,out=aregout1,out[0..14]=addressM);
+
+    // instructionのaビットの値を判定して、Aレジスタかメモリ入力のどちらかをALUに渡す
+    // aビットが1のときはメモリ操作になる
+    Mux16(a=aregout1,b=inM,sel=instruction[12],out=inalu);
+    
+    // ALUはDレジスタとメモリorAレジスタの操作となる
+    ALU(x=dregout,y=inalu,zx=instruction[11],nx=instruction[10],zy=instruction[9],ny=instruction[8],f=instruction[7],no=instruction[6],
+        out=outM,out=outalu1,zr=outalu2,ng=outalu3);
+
+    // dest領域を参照して、ALUの出力をどうにかす
+    // dest領域の1番目のbitが1ならAレジスタ
+    // instructionとマルチプレクサで判定しているけど、ここがちとよくわからんな
+    // ここの振り分け処理が一つ前のクロックのALUの出力なような気がして、そこがよくわからない
+
+    // dest領域の2番目のbitが1かつC命令ならDレジスタ
+    And(a=instruction[4], b=instruction[15], out=dregjudge);
+    DRegister(in=outalu1,load=dregjudge,out=dregout);
+    
+    // dest領域の3番目のbitが1ならメモリーに書き込みたいっぽい
+    And(a=instruction[15],b=instruction[3],out=writeM);
+
+
+    // jump領域を参照して、次に実行されるプログラムのPCを指定する
+    // resetが1ならPCもゼロにする
+    // jump領域は3bitあって、0と比較しての様々な条件が定義されている
+    // ALUの出力（zr,ng）を使って、ジャンプするかどうかの判定を実施する
+    And(a=instruction[2],b=outalu3,out=tmp1);
+    And(a=instruction[1],b=outalu2,out=tmp2);
+    Or(a=outalu2,b=outalu3,out=or1);
+    Not(in=or1,out=notor1);
+    And(a=instruction[0],b=notor1,out=tmp3);
+    Or(a=tmp1,b=tmp2,out=tmp4);
+    Or(a=tmp3,b=tmp4,out=tmp5);
+    And(a=tmp5,b=instruction[15],out=isjump);
+
+    // program counter
+    Add16(a=outpc, b[0]=true, out=nextpc);
+    // ジャンプするかどうかは後から判定するとりあえずプラス1
+    // プラス1したやつとAレジスタの値をマルチプレクサで選択してプログラムカウンタに流す
+    Mux16(a=nextpc, b=aregout1, sel=isjump, out=inpc1);
+    Mux16(a=inpc1, b[0]=false, sel=reset, out=inpc2);
+    PC(in=inpc2,load=true,out[0..14]=pc,out=outpc);
+}
