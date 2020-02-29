@@ -107,48 +107,7 @@ class JackTokenizer():
             return const.STRING_CONST
 
     def key_word(self):
-        if self.token == "class":
-            return const.CLASS
-        if self.token == "method":
-            return const.METHOD
-        if self.token == "function":
-            return const.FUNCTION
-        if self.token == "constructor":
-            return const.CONSTRUCTOR
-        if self.token == "int":
-            return const.INT
-        if self.token == "boolean":
-            return const.BOOLEAN
-        if self.token == "char":
-            return const.CHAR
-        if self.token == "void":
-            return const.VOID
-        if self.token == "var":
-            return const.VAR
-        if self.token == "static":
-            return const.STATIC
-        if self.token == "field":
-            return const.FIELD
-        if self.token == "let":
-            return const.LET
-        if self.token == "do":
-            return const.DO
-        if self.token == "if":
-            return const.IF
-        if self.token == "else":
-            return const.ELSE
-        if self.token == "while":
-            return const.WHILE
-        if self.token == "return":
-            return const.RETURN
-        if self.token == "true":
-            return const.TRUE
-        if self.token == "false":
-            return const.FALSE
-        if self.token == "null":
-            return const.NULL
-        if self.token == "this":
-            return const.THIS
+        return self.token
 
     def symbol(self):
         return self.token.replace("&","&amp;").replace("<","&lt;").replace(">","&gt;")
@@ -161,4 +120,7 @@ class JackTokenizer():
 
     def string_val(self):
         return self.token[1:-1]
+    
+    def get_next_token(self):
+        return self.input_file[self.idx+1].strip()
     

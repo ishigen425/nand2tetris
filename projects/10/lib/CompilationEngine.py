@@ -16,7 +16,7 @@ class CompilationEngine():
     def _close(self):
         self.output_file.close()
 
-    def compile_class(self, ):
+    def compile_class(self):
         self.is_compiled_class = True
         self.jack_tokenizer.advance()
         self._write_line("<class>")
@@ -28,40 +28,25 @@ class CompilationEngine():
         symbol = self.jack_tokenizer.symbol()
         self._write_line(const.INLINE_SYMBOL_TAG.format(symbol))
         while self.jack_tokenizer.has_more_tokens():
-            self._next()
+            self.jack_tokenizer.advance()
+            token_type = self.jack_tokenizer.token_type()
+            if const.KEYWORD == token_type:
+                key_word = self.jack_tokenizer.key_word()
+                if key_word in (const.METHOD, const.FUNCTION, const.CONSTRUCTOR):
+                    self.compile_subroutine()
+                elif key_word in (const.STATIC, const.FIELD):
+                    self.compile_class_var_dec()
+            else:
+                assert True
+
         self._write_line(const.INLINE_SYMBOL_TAG.format(self.jack_tokenizer.symbol()))
         self._write_line("</class>")
 
-    def _next(self):
-        if not self.jack_tokenizer.has_more_tokens():
-            return
-        self.jack_tokenizer.advance()
-        token_type = self.jack_tokenizer.token_type()
-        if const.KEYWORD == token_type:
-            key_word = self.jack_tokenizer.key_word()
-            if key_word in (const.METHOD, const.FUNCTION, const.CONSTRUCTOR):
-                self.compile_subroutine()
-            elif const.VOID == key_word:
-                pass
-            elif key_word in (const.STATIC, const.FIELD):
-                self.compile_class_var_dec()
-            elif const.RETURN == key_word:
-                self.compile_return()
-            else:
-                self._write_line(const.INLINE_KEYWORD_TAG.format(key_word))
-    
     def compile_class_var_dec(self):
         assert self.is_compiled_class
         self._write_line(const.START_TAG_FORMAT.format("classVarDec"))
         self._write_line(const.INLINE_KEYWORD_TAG.format(self.jack_tokenizer.key_word()))
-        while True:
-            self.jack_tokenizer.advance()
-            token_type = self.jack_tokenizer.token_type()
-            if token_type == const.SYMBOL:
-                self._write_cmn()
-                break
-            self._write_cmn()
-
+        self._write_to_semicolon()
         self._write_line(const.END_TAG_FORMAT.format("classVarDec"))
 
     def compile_subroutine(self):
@@ -81,7 +66,7 @@ class CompilationEngine():
             self._write_cmn()
 
         self._write_line(const.END_TAG_FORMAT.format("parameterList"))
-        self._write_line(const.INLINE_SYMBOL_TAG.format(self.jack_tokenizer.symbol()))
+        self._write_line(const.INLINE_SYMBOL_TAG.format(self.jack_tokenizer.symbol())) # write "("
 
         # subroutinbody
         self._write_line(const.START_TAG_FORMAT.format("subroutineBody"))
@@ -108,21 +93,13 @@ class CompilationEngine():
 
     def compile_parameter_list(self):
         assert self.is_compiled_class
-        self._next()
+        pass
 
     def compile_var_dec(self):
         assert self.is_compiled_class
         self._write_line(const.START_TAG_FORMAT.format("varDec"))
         self._write_line(const.INLINE_KEYWORD_TAG.format(self.jack_tokenizer.key_word()))
-
-        while True:
-            self.jack_tokenizer.advance()
-            token_type = self.jack_tokenizer.token_type()
-            if token_type == const.SYMBOL:
-                self._write_cmn()
-                break
-            self._write_cmn()
-
+        self._write_to_semicolon()
         self._write_line(const.END_TAG_FORMAT.format("varDec"))
 
     def compile_statements(self):
@@ -145,36 +122,14 @@ class CompilationEngine():
         assert self.is_compiled_class
         self._write_line(const.START_TAG_FORMAT.format("doStatement"))
         self._write_line(const.INLINE_KEYWORD_TAG.format(self.jack_tokenizer.key_word()))
-            
-        while True:
-            self.jack_tokenizer.advance()
-            self._write_cmn()
-            if self.jack_tokenizer.token_type() == const.SYMBOL and self.jack_tokenizer.symbol() == ";":
-                break
-            if self.jack_tokenizer.token_type() == const.SYMBOL and self.jack_tokenizer.symbol() == "(":
-                self.compile_expression_list()
-                self._write_cmn()
-        
+        self._write_to_semicolon()
         self._write_line(const.END_TAG_FORMAT.format("doStatement"))
 
     def compile_let(self):
         assert self.is_compiled_class
         self._write_line(const.START_TAG_FORMAT.format("letStatement"))
         self._write_line(const.INLINE_KEYWORD_TAG.format(self.jack_tokenizer.key_word()))
-
-        is_after_symbol = False            
-        while True:
-            self.jack_tokenizer.advance()
-            if is_after_symbol:
-                self.compile_expression()
-            else:
-                self._write_cmn()
-            if self.jack_tokenizer.token_type() == const.SYMBOL and self.jack_tokenizer.symbol() == ";":
-                break
-            if self.jack_tokenizer.token_type() == const.SYMBOL:
-                is_after_symbol = True
-
-        self._write_cmn()
+        self._write_to_semicolon()
         self._write_line(const.END_TAG_FORMAT.format("letStatement"))
 
     def compile_while(self):
@@ -182,24 +137,16 @@ class CompilationEngine():
         self._write_line(const.START_TAG_FORMAT.format("whileStatement"))
         self._write_line(const.INLINE_KEYWORD_TAG.format("while"))
         self.jack_tokenizer.advance()
-        self._write_line(const.INLINE_SYMBOL_TAG.format(self.jack_tokenizer.symbol()))
+        self._write_line(const.INLINE_SYMBOL_TAG.format(self.jack_tokenizer.symbol())) # write "("
     
         self.jack_tokenizer.advance()
         self.compile_expression()
-        self._write_cmn()
+        self._write_cmn() # write ")"
         
         self.jack_tokenizer.advance()
-        self._write_line(const.INLINE_SYMBOL_TAG.format(self.jack_tokenizer.symbol()))
-        self._write_line(const.START_TAG_FORMAT.format("statements"))
-            
-        while True:
-            self.jack_tokenizer.advance()
-            if self.jack_tokenizer.token_type() == const.SYMBOL and self.jack_tokenizer.symbol() == "}":
-                break
-            self.compile_statements()
-
-        self._write_line(const.END_TAG_FORMAT.format("statements"))
-        self._write_line(const.INLINE_SYMBOL_TAG.format(self.jack_tokenizer.symbol()))
+        self._write_line(const.INLINE_SYMBOL_TAG.format(self.jack_tokenizer.symbol())) # write "{"
+        self._write_statements()
+        self._write_line(const.INLINE_SYMBOL_TAG.format(self.jack_tokenizer.symbol())) # write "}"
         self._write_line(const.END_TAG_FORMAT.format("whileStatement"))
 
     def compile_return(self):
@@ -226,28 +173,36 @@ class CompilationEngine():
         
         self.jack_tokenizer.advance()
         self._write_line(const.INLINE_SYMBOL_TAG.format(self.jack_tokenizer.symbol()))
-        self._write_line(const.START_TAG_FORMAT.format("statements"))
-        
-        while True:
-            self.jack_tokenizer.advance()
-            if self.jack_tokenizer.token_type() == const.SYMBOL and self.jack_tokenizer.symbol() == "}":
-                break
-            self.compile_statements()
-
-        self._write_line(const.END_TAG_FORMAT.format("statements"))
+        self._write_statements()
         self._write_line(const.INLINE_SYMBOL_TAG.format(self.jack_tokenizer.symbol()))
+        if self.jack_tokenizer.get_next_token() == const.ELSE:
+            self.jack_tokenizer.advance()
+            self._write_line(const.INLINE_KEYWORD_TAG.format(self.jack_tokenizer.key_word()))
+            self.jack_tokenizer.advance()
+            self._write_line(const.INLINE_SYMBOL_TAG.format(self.jack_tokenizer.symbol()))
+            self._write_statements()
+            self._write_line(const.INLINE_SYMBOL_TAG.format(self.jack_tokenizer.symbol()))
         self._write_line(const.END_TAG_FORMAT.format("ifStatement"))
 
     def compile_expression(self):
+        ''' "=" から ";" が出てくるまで 
+            "(" から ")" が出てくるまで 
+            "[" から "]" が出てくるまで
+            expressionタグには0回以上のtermタグが入る
+            "=","(" はすでにコンパイルされた状態で使う
+            ";", ")", "]" はコンパイルしない
+            "=" または "(" の次のtokenの状態で呼び出す
+        '''
         assert self.is_compiled_class
-        # = のあとから ; が出てくるまで
-        # ( のあとから ) が出てくるまで
-        # expressionタグには0回以上のtermタグが入る
+        assert not (self.jack_tokenizer.token_type() == const.SYMBOL and self.jack_tokenizer.symbol() in ("=","("))
         self._write_line(const.START_TAG_FORMAT.format("expression"))
         while True:
-            if self.jack_tokenizer.token_type() == const.SYMBOL and self.jack_tokenizer.symbol() in (")", ";"):
+            if self.jack_tokenizer.token_type() == const.SYMBOL and self.jack_tokenizer.symbol() in (")", ";", "]",","):
                 break
-            self.compile_term()
+            if self.jack_tokenizer.token_type() == const.SYMBOL:
+                self._write_cmn()
+            else:
+                self.compile_term()
             self.jack_tokenizer.advance()
         self._write_line(const.END_TAG_FORMAT.format("expression"))
 
@@ -261,37 +216,26 @@ class CompilationEngine():
         elif self.jack_tokenizer.token_type() == const.IDENTIFIER:
             self._write_line(const.INLINE_IDENTIFIER_TAG.format(self.jack_tokenizer.identifier()))
         elif self.jack_tokenizer.token_type() == const.KEYWORD:
-            # かっこ以外のsymbolはkeywordタグで出力する
-            if self.jack_tokenizer.key_word() in ("(", ")"):
-                # "(" を出力して、閉じかっこが出てくるまでexpressionを呼ぶ？
-                self._write_line(const.INLINE_SYMBOL_TAG.format(self.jack_tokenizer.key_word()))
-                # while True:
-                #     self.jack_tokenizer.advance()
-                #     if self.jack_tokenizer.token_type() == const.SYMBOL and self.jack_tokenizer.symbol() == ")":
-                #         break
-                #     self.jack_tokenizerwhile True:
-                #     self.jack_tokenizer.advance()
-                #     if self.jack_tokenizer.token_type() == const.SYMBOL and self.jack_tokenizer.symbol() == ")":
-                #         break
-                #     self.jack_tokenizer
-
-                # self._write_line(const.INLINE_SYMBOL_TAG.format(self.jack_tokenizer.key_word()))
-
-                # self._write_line(const.INLINE_SYMBOL_TAG.format(self.jack_tokenizer.key_word()))
-            else:
-                self._write_line(const.INLINE_SYMBOL_TAG.format(self.jack_tokenizer.key_word()))
+            self._write_cmn()
         self._write_line(const.END_TAG_FORMAT.format("term"))
 
     def compile_expression_list(self):
+        '''
+            "(" が出力されてから呼び出される
+            "(" の次のトークンの状態で呼び出す
+            ")" は出力しない
+        '''
         assert self.is_compiled_class
+        assert not (self.jack_tokenizer.token_type() == const.SYMBOL and self.jack_tokenizer.symbol() in ("("))
         self._write_line(const.START_TAG_FORMAT.format("expressionList"))
         while True:
-            self.jack_tokenizer.advance()
             if self.jack_tokenizer.token_type() == const.SYMBOL and self.jack_tokenizer.symbol() in ( ")", ";"):
                 break
             self.compile_expression()
             if self.jack_tokenizer.token_type() == const.SYMBOL and self.jack_tokenizer.symbol() in ( ")", ";"):
                 break
+            self._write_cmn()
+            self.jack_tokenizer.advance()
         self._write_line(const.END_TAG_FORMAT.format("expressionList"))
 
     def _write_line(self, value):
@@ -305,3 +249,33 @@ class CompilationEngine():
             self._write_line(const.INLINE_IDENTIFIER_TAG.format(self.jack_tokenizer.identifier()))
         elif token_type == const.SYMBOL:
             self._write_line(const.INLINE_SYMBOL_TAG.format(self.jack_tokenizer.symbol()))
+        else:
+            assert True
+
+    def _write_statements(self):
+        self._write_line(const.START_TAG_FORMAT.format("statements"))
+        while True:
+            self.jack_tokenizer.advance()
+            if self.jack_tokenizer.token_type() == const.SYMBOL and self.jack_tokenizer.symbol() == "}":
+                break
+            self.compile_statements()
+        self._write_line(const.END_TAG_FORMAT.format("statements"))
+
+    def _write_to_semicolon(self):
+        '''
+            semicolonを描画したら処理終了
+        '''
+        while True:
+            self.jack_tokenizer.advance()
+            self._write_cmn()
+            if self.jack_tokenizer.token_type() == const.SYMBOL and self.jack_tokenizer.symbol() in ("=", "["):
+                self.jack_tokenizer.advance()
+                self.compile_expression()
+                self._write_cmn()
+            if self.jack_tokenizer.token_type() == const.SYMBOL and self.jack_tokenizer.symbol() in ("("):
+                self.jack_tokenizer.advance()
+                self.compile_expression_list()
+                self._write_cmn()
+            if self.jack_tokenizer.token_type() == const.SYMBOL and self.jack_tokenizer.symbol() == ";":
+                return
+            

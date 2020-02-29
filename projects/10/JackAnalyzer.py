@@ -13,6 +13,7 @@ def first_stage_function(file_list):
     for file_path in file_list:
         jack_tokenizer = JackTokenizer(file_path)
         output_file_path = file_path.replace(".jack", "T.xml")
+        print(output_file_path)
         with open(output_file_path, mode="w") as output_file:
             output_file.write("<tokens>\n")
             while jack_tokenizer.has_more_tokens():
@@ -37,9 +38,9 @@ def second_stage_function(file_list):
     for file_path in file_list:
         jack_tokenizer = JackTokenizer(file_path)
         output_file_path = file_path.replace(".jack", ".xml")
+        print(output_file_path)
         compile_engine = CompilationEngine(jack_tokenizer, output_file_path)
         compile_engine.create_file()
-        break
 
 second_stage_function(file_list)
 
