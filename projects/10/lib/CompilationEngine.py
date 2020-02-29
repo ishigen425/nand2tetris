@@ -194,12 +194,16 @@ class CompilationEngine():
             "=" または "(" の次のtokenの状態で呼び出す
         '''
         assert self.is_compiled_class
-        assert not (self.jack_tokenizer.token_type() == const.SYMBOL and self.jack_tokenizer.symbol() in ("=","("))
+        #assert not (self.jack_tokenizer.token_type() == const.SYMBOL and self.jack_tokenizer.symbol() in ("=","("))
         self._write_line(const.START_TAG_FORMAT.format("expression"))
+        cnt = 0
         while True:
+            cnt += 1
             if self.jack_tokenizer.token_type() == const.SYMBOL and self.jack_tokenizer.symbol() in (")", ";", "]",","):
                 break
-            if self.jack_tokenizer.token_type() == const.SYMBOL:
+            if self.jack_tokenizer.token_type() == const.SYMBOL and self.jack_tokenizer.symbol() in ("-") and cnt == 1:
+                self.compile_term()
+            elif self.jack_tokenizer.token_type() == const.SYMBOL and self.jack_tokenizer.symbol() in ("+","*","/","&amp;","|","&lt;","&gt;","=","-"):
                 self._write_cmn()
             else:
                 self.compile_term()
@@ -209,14 +213,46 @@ class CompilationEngine():
     def compile_term(self):
         assert self.is_compiled_class
         self._write_line(const.START_TAG_FORMAT.format("term"))
-        if self.jack_tokenizer.token_type() == const.INT_CONST:
-            self._write_line(const.INLINE_TAG_FORMAT.format("integerConstant",self.jack_tokenizer.int_val(),"integerConstant"))
-        elif self.jack_tokenizer.token_type() == const.STRING_CONST:
-            self._write_line(const.INLINE_TAG_FORMAT.format("stringConstant",self.jack_tokenizer.string_val(),"stringConstant"))
-        elif self.jack_tokenizer.token_type() == const.IDENTIFIER:
-            self._write_line(const.INLINE_IDENTIFIER_TAG.format(self.jack_tokenizer.identifier()))
-        elif self.jack_tokenizer.token_type() == const.KEYWORD:
-            self._write_cmn()
+        while True:
+            if self.jack_tokenizer.token_type() == const.INT_CONST:
+                self._write_line(const.INLINE_TAG_FORMAT.format("integerConstant",self.jack_tokenizer.int_val(),"integerConstant"))
+            elif self.jack_tokenizer.token_type() == const.STRING_CONST:
+                self._write_line(const.INLINE_TAG_FORMAT.format("stringConstant",self.jack_tokenizer.string_val(),"stringConstant"))
+            elif self.jack_tokenizer.token_type() == const.IDENTIFIER:
+                self._write_line(const.INLINE_IDENTIFIER_TAG.format(self.jack_tokenizer.identifier()))
+            elif self.jack_tokenizer.token_type() == const.KEYWORD:
+                self._write_cmn()
+            elif self.jack_tokenizer.token_type() == const.SYMBOL:
+                if self.jack_tokenizer.symbol() in ("("):
+                    self._write_cmn()
+                    self.jack_tokenizer.advance()
+                    self.compile_expression()
+                    self._write_cmn()
+                else:
+                    self._write_cmn()
+            else:
+                assert False
+            # 次のtokenを判定する
+            if self.jack_tokenizer.token_type() and const.SYMBOL and self.jack_tokenizer.symbol() in ("~","-"):
+                self.jack_tokenizer.advance()
+                self.compile_term()
+            if self.jack_tokenizer.get_next_token() in ("["):
+                self.jack_tokenizer.advance()
+                self._write_cmn()
+                self.jack_tokenizer.advance()
+                self.compile_expression()
+                self._write_cmn()
+            elif self.jack_tokenizer.get_next_token() in ("("):
+                self.jack_tokenizer.advance()
+                self._write_cmn()
+                self.jack_tokenizer.advance()
+                self.compile_expression_list()
+                self._write_cmn()
+            if self.jack_tokenizer.get_next_token() in (".") or (self.jack_tokenizer.token_type() == const.SYMBOL and self.jack_tokenizer.symbol() == (".")):
+                self.jack_tokenizer.advance()
+                continue
+            
+            break
         self._write_line(const.END_TAG_FORMAT.format("term"))
 
     def compile_expression_list(self):
@@ -226,16 +262,16 @@ class CompilationEngine():
             ")" は出力しない
         '''
         assert self.is_compiled_class
-        assert not (self.jack_tokenizer.token_type() == const.SYMBOL and self.jack_tokenizer.symbol() in ("("))
+        #assert not (self.jack_tokenizer.token_type() == const.SYMBOL and self.jack_tokenizer.symbol() in ("("))
         self._write_line(const.START_TAG_FORMAT.format("expressionList"))
-        while True:
-            if self.jack_tokenizer.token_type() == const.SYMBOL and self.jack_tokenizer.symbol() in ( ")", ";"):
-                break
-            self.compile_expression()
-            if self.jack_tokenizer.token_type() == const.SYMBOL and self.jack_tokenizer.symbol() in ( ")", ";"):
-                break
-            self._write_cmn()
-            self.jack_tokenizer.advance()
+        # 空の場合に対応する
+        if not (self.jack_tokenizer.token_type() == const.SYMBOL and self.jack_tokenizer.symbol() in ( ")", ";")):
+            while True:
+                self.compile_expression()
+                if self.jack_tokenizer.token_type() == const.SYMBOL and self.jack_tokenizer.symbol() in ( ")", ";"):
+                    break
+                self._write_cmn()
+                self.jack_tokenizer.advance()
         self._write_line(const.END_TAG_FORMAT.format("expressionList"))
 
     def _write_line(self, value):

@@ -5,7 +5,7 @@ from lib.JackTokenizer import JackTokenizer
 import glob
 
 # folder or file_path
-args = r"/home/ishigen/Documents/basic/nand2tetris/projects/10/ExpressionLessSquare"
+args = r"/home/ishigen/Documents/basic/nand2tetris/projects/10/Square"
 file_list = glob.glob(args+"/*.jack")
 
 # first stage

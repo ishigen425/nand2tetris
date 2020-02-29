@@ -122,5 +122,7 @@ class JackTokenizer():
         return self.token[1:-1]
     
     def get_next_token(self):
-        return self.input_file[self.idx+1].strip()
+        if self.idx + 1 < len(self.input_file):
+            return self.input_file[self.idx+1].strip()
+        return self.token
     
