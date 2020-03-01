@@ -59,12 +59,7 @@ class CompilationEngine():
 
         # paramterlist
         self._write_line(const.START_TAG_FORMAT.format("parameterList"))
-        while True:
-            self.jack_tokenizer.advance()
-            if self.jack_tokenizer.token_type() == const.SYMBOL and self.jack_tokenizer.symbol() == ")":
-                break
-            self._write_cmn()
-
+        self.compile_parameter_list()       
         self._write_line(const.END_TAG_FORMAT.format("parameterList"))
         self._write_line(const.INLINE_SYMBOL_TAG.format(self.jack_tokenizer.symbol())) # write "("
 
@@ -93,7 +88,12 @@ class CompilationEngine():
 
     def compile_parameter_list(self):
         assert self.is_compiled_class
-        pass
+        while True:
+            self.jack_tokenizer.advance()
+            if self.jack_tokenizer.token_type() == const.SYMBOL and self.jack_tokenizer.symbol() == ")":
+                break
+            self._write_cmn()
+
 
     def compile_var_dec(self):
         assert self.is_compiled_class
