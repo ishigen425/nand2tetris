@@ -175,6 +175,7 @@ class CompilationEngine():
         self._write_line(const.INLINE_SYMBOL_TAG.format(self.jack_tokenizer.symbol()))
         self._write_statements()
         self._write_line(const.INLINE_SYMBOL_TAG.format(self.jack_tokenizer.symbol()))
+        # 次のトークンを見てelseかどうか判定する
         if self.jack_tokenizer.get_next_token() == const.ELSE:
             self.jack_tokenizer.advance()
             self._write_line(const.INLINE_KEYWORD_TAG.format(self.jack_tokenizer.key_word()))
@@ -194,20 +195,19 @@ class CompilationEngine():
             "=" または "(" の次のtokenの状態で呼び出す
         '''
         assert self.is_compiled_class
-        #assert not (self.jack_tokenizer.token_type() == const.SYMBOL and self.jack_tokenizer.symbol() in ("=","("))
         self._write_line(const.START_TAG_FORMAT.format("expression"))
-        cnt = 0
+        is_first = True
         while True:
-            cnt += 1
             if self.jack_tokenizer.token_type() == const.SYMBOL and self.jack_tokenizer.symbol() in (")", ";", "]",","):
                 break
-            if self.jack_tokenizer.token_type() == const.SYMBOL and self.jack_tokenizer.symbol() in ("-") and cnt == 1:
+            if self.jack_tokenizer.token_type() == const.SYMBOL and self.jack_tokenizer.symbol() in ("-") and is_first:
                 self.compile_term()
             elif self.jack_tokenizer.token_type() == const.SYMBOL and self.jack_tokenizer.symbol() in ("+","*","/","&amp;","|","&lt;","&gt;","=","-"):
                 self._write_cmn()
             else:
                 self.compile_term()
             self.jack_tokenizer.advance()
+            is_first = False
         self._write_line(const.END_TAG_FORMAT.format("expression"))
 
     def compile_term(self):
@@ -227,9 +227,7 @@ class CompilationEngine():
                     self._write_cmn()
                     self.jack_tokenizer.advance()
                     self.compile_expression()
-                    self._write_cmn()
-                else:
-                    self._write_cmn()
+                self._write_cmn()
             else:
                 assert False
             # 次のtokenを判定する
@@ -262,7 +260,6 @@ class CompilationEngine():
             ")" は出力しない
         '''
         assert self.is_compiled_class
-        #assert not (self.jack_tokenizer.token_type() == const.SYMBOL and self.jack_tokenizer.symbol() in ("("))
         self._write_line(const.START_TAG_FORMAT.format("expressionList"))
         # 空の場合に対応する
         if not (self.jack_tokenizer.token_type() == const.SYMBOL and self.jack_tokenizer.symbol() in ( ")", ";")):
