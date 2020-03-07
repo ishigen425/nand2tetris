@@ -4,11 +4,13 @@ push constant 16
 push constant 1
 neg
 call Main.fillMemory 3
+pop temp 0
 push constant 8000
 call Memory.peek 1
 pop local 0
 push local 0
 call Main.convert 1
+pop temp 0
 push constant 0
 return
 function Main.convert 3
@@ -47,6 +49,7 @@ push local 1
 add
 push constant 1
 call Memory.poke 2
+pop temp 0
 goto IF_END1
 label IF_FALSE1
 push constant 8000
@@ -54,6 +57,7 @@ push local 1
 add
 push constant 0
 call Memory.poke 2
+pop temp 0
 label IF_END1
 goto IF_END0
 label IF_FALSE0
@@ -90,6 +94,7 @@ if-goto WHILE_END0
 push argument 0
 push argument 2
 call Memory.poke 2
+pop temp 0
 push argument 1
 push constant 1
 sub

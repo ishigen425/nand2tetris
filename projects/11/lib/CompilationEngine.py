@@ -30,6 +30,7 @@ class CompilationEngine():
         self.class_name = self.jack_tokenizer.identifier()
         self.jack_tokenizer.advance()
         symbol = self.jack_tokenizer.symbol()
+        self.field_num = 0
         while self.jack_tokenizer.has_more_tokens():
             self.while_exp_counter = 0
             self.while_end_counter = 0
@@ -58,17 +59,16 @@ class CompilationEngine():
             self.jack_tokenizer.advance()
             if self.jack_tokenizer.token_type() == const.IDENTIFIER:
                 self.symbol_table.define(self.jack_tokenizer.identifier(), _type, kind)
-            
+                self.field_num += 1
             if self.jack_tokenizer.token_type() == const.SYMBOL and self.jack_tokenizer.symbol() == ";":
                 return
-        
-
+    
     def compile_subroutine(self):
         assert self.is_compiled_class
         self.jack_tokenizer.advance()
-        
         self.jack_tokenizer.advance()
         function_name = self.class_name + "." + self.jack_tokenizer.identifier()
+        is_constructor = self.jack_tokenizer.identifier() == "new"
         self.jack_tokenizer.advance()
         # paramterlist
         self.compile_parameter_list()
@@ -81,8 +81,14 @@ class CompilationEngine():
                 self.compile_var_dec()
                 continue
             if not is_start_statements:
-                
                 self.vm_writer.write_function(function_name, self.symbol_table.var_count(const.VAR))
+                if is_constructor:
+                    self.vm_writer.write_push(const.CONSTANT, self.field_num)
+                    self.vm_writer.write_call("Memory.alloc", 1)
+                    self.vm_writer.write_pop("pointer", 0)
+                elif not self.class_name == "Main":
+                    self.vm_writer.write_push(const.ARGMENT, 0)
+                    self.vm_writer.write_pop("pointer", 0)
                 is_start_statements = True
             if self.jack_tokenizer.token_type() == const.SYMBOL and self.jack_tokenizer.symbol() == "}":
                 break
@@ -167,7 +173,12 @@ class CompilationEngine():
         #     elif self.jack_tokenizer.token_type() == const.SYMBOL and self.jack_tokenizer.symbol() in ("("):
         #         self.compile_expression_list()
         #self._compile_option(option)
+        if not "." in function_name:
+            function_name = self.class_name + "." + function_name
+            self.vm_writer.write_push("pointer", 0)
+            self.n_expression_list += 1
         self.vm_writer.write_call(function_name, self.n_expression_list)
+        self.vm_writer.write_pop(const.TEMP, 0)
         self.n_expression_list = 0
         
 
@@ -218,14 +229,18 @@ class CompilationEngine():
         self.vm_writer.write_label(true_label)
         self.jack_tokenizer.advance()
         self._write_statements()
-        self.vm_writer.write_goto(end_label)
-        self.vm_writer.write_label(false_label)
         # 次のトークンを見てelseかどうか判定する
         if self.jack_tokenizer.get_next_token() == const.ELSE:
+            self.vm_writer.write_goto(end_label)
+            self.vm_writer.write_label(false_label)
             self.jack_tokenizer.advance()
             self.jack_tokenizer.advance()
             self._write_statements()
-        self.vm_writer.write_label(end_label)
+            self.vm_writer.write_label(end_label)
+        else:
+            self.vm_writer.write_label(false_label)
+
+        
         
 
     def compile_expression(self):
@@ -270,6 +285,8 @@ class CompilationEngine():
                     self.vm_writer.write_push(const.LOCAL, self.symbol_table.index_of(self.jack_tokenizer.identifier()))
                 elif self.symbol_table.kind_of(self.jack_tokenizer.identifier()) == const.ARG:
                     self.vm_writer.write_push(const.ARGMENT, self.symbol_table.index_of(self.jack_tokenizer.identifier()))
+                elif self.symbol_table.kind_of(self.jack_tokenizer.identifier()) == const.FIELD:
+                    self.vm_writer.write_push(const.THIS, self.symbol_table.index_of(self.jack_tokenizer.identifier()))
                 else:
                     function_name += self.jack_tokenizer.identifier()
             elif self.jack_tokenizer.token_type() == const.KEYWORD:
@@ -278,6 +295,8 @@ class CompilationEngine():
                     self.vm_writer._write_line("not")
                 elif self.jack_tokenizer.key_word() == "false":
                     self.vm_writer.write_push(const.CONSTANT, 0)
+                elif self.jack_tokenizer.key_word() == "this":
+                    self.vm_writer.write_push("pointer", 0)
             elif self.jack_tokenizer.token_type() == const.SYMBOL:
                 if self.jack_tokenizer.symbol() in ("("):
                     self.jack_tokenizer.advance()
@@ -374,6 +393,8 @@ class CompilationEngine():
                     self.vm_writer.write_pop(const.LOCAL, self.symbol_table.index_of(var_name))
                 elif self.symbol_table.kind_of(var_name) == const.ARG:
                     self.vm_writer.write_pop(const.ARGMENT, self.symbol_table.index_of(var_name))
+                elif self.symbol_table.kind_of(var_name) == const.FIELD:
+                    self.vm_writer.write_pop(const.THIS, self.symbol_table.index_of(var_name))
             if self.jack_tokenizer.token_type() == const.SYMBOL and self.jack_tokenizer.symbol() in ("("):
                 self.jack_tokenizer.advance()
                 self.compile_expression_list()
@@ -421,6 +442,8 @@ class CompilationEngine():
             self.vm_writer.write_call("Math.Divide", 2)
         elif option == "&gt;":
             self.vm_writer._write_line("gt")
+        elif option == "&lt;":
+            self.vm_writer._write_line("lt")
         elif option == "~":
             self.vm_writer._write_line("not")
         elif option == "&amp;":

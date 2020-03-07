@@ -56,6 +56,9 @@ class SymbolTable():
             assert False
 
     def kind_of(self, name):
+        '''
+            Return: STATIC, FIELD, ARG, VAR
+        '''
         if name in self.subroutine_symbol_table.keys():
             return self.subroutine_symbol_table[name].get_info("kind")
         elif name in self.class_symbol_table.keys():

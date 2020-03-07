@@ -5,7 +5,7 @@ from lib.JackTokenizer import JackTokenizer
 import glob, os
 
 # folder or file_path
-args = r"/home/ishigen/Documents/basic/nand2tetris/projects/11/ConvertToBin/Main.jack"
+args = r"/home/ishigen/Documents/basic/nand2tetris/projects/11/ConvertToBin/"
 if os.path.isfile(args):
     file_list = [args]
 else:
