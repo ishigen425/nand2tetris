@@ -60,8 +60,12 @@ class JackTokenizer():
     def _split_symbol(self, value, symbol):
         tmp = ""
         ret = []
+        is_quote = False
         for v in value:
-            if v in (symbol):
+            if v == "\"":
+                is_quote = not is_quote
+                tmp += v
+            elif v in (symbol) and not is_quote:
                 if tmp != "":
                     ret.append(tmp)
                     tmp = ""

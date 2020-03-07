@@ -1,6 +1,6 @@
 # coding:utf-8
 from lib import const
-from JackTokenizer import JackTokenizer
+from lib import JackTokenizer
 
 class CompilationEngine():
 
@@ -17,6 +17,9 @@ class CompilationEngine():
         self.output_file.close()
 
     def compile_class(self):
+        '''
+            クラスをコンパイルする
+        '''
         self.is_compiled_class = True
         self.jack_tokenizer.advance()
         self._write_line("<class>")
