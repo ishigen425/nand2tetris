@@ -150,34 +150,27 @@ class CompilationEngine():
     def compile_do(self):
         assert self.is_compiled_class
         self.jack_tokenizer.advance()
-        function_name = ""
+        function_name = []
         option = ""
         self.n_expression_list = 0
         while not (self.jack_tokenizer.token_type() == const.SYMBOL and self.jack_tokenizer.symbol() in ("(")):
-            tmp = self.jack_tokenizer.identifier() if self.jack_tokenizer.token_type() == const.IDENTIFIER else self.jack_tokenizer.symbol()
-            function_name += tmp
+            function_name.append(self.jack_tokenizer.identifier() if self.jack_tokenizer.token_type() == const.IDENTIFIER else self.jack_tokenizer.symbol())
             self.jack_tokenizer.advance()
         self.jack_tokenizer.advance()
         self.compile_expression_list()
-        # while not (self.jack_tokenizer.token_type() == const.SYMBOL and self.jack_tokenizer.symbol() in (")")):
-        #     self.jack_tokenizer.advance()
-        #     if self.jack_tokenizer.token_type() == const.INT_CONST:
-        #         self.vm_writer.write_push(const.CONSTANT, self.jack_tokenizer.int_val())
-        #         self.n_expression_list += 1
-        #     elif self.jack_tokenizer.token_type() == const.IDENTIFIER:
-        #         var_name = self.jack_tokenizer.identifier()
-        #         self.vm_writer.write_push(const.LOCAL, self.symbol_table.index_of(var_name))
-        #         self.n_expression_list += 1
-        #     elif self.jack_tokenizer.token_type() == const.SYMBOL and self.jack_tokenizer.symbol() in ("+","*","/","&amp;","|","&lt;","&gt;","=","-"):
-        #         option = self.jack_tokenizer.symbol()
-        #     elif self.jack_tokenizer.token_type() == const.SYMBOL and self.jack_tokenizer.symbol() in ("("):
-        #         self.compile_expression_list()
-        #self._compile_option(option)
-        if not "." in function_name:
-            function_name = self.class_name + "." + function_name
+        if len(function_name) == 1:
+            function_name = [self.class_name,".",function_name[0]]
             self.vm_writer.write_push("pointer", 0)
             self.n_expression_list += 1
-        self.vm_writer.write_call(function_name, self.n_expression_list)
+        elif self.symbol_table.kind_of(function_name[0]) == const.FIELD:
+            function_name[0] = self.symbol_table.type_of(function_name[0])
+            self.vm_writer.write_push(const.THIS, 0)
+            self.n_expression_list += 1
+        elif self.symbol_table.kind_of(function_name[0]) == const.VAR:
+            function_name[0] = self.symbol_table.type_of(function_name[0])
+            self.vm_writer.write_push(const.LOCAL, 0)
+            self.n_expression_list += 1
+        self.vm_writer.write_call("".join(function_name), self.n_expression_list)
         self.vm_writer.write_pop(const.TEMP, 0)
         self.n_expression_list = 0
         
