@@ -22,7 +22,8 @@ class SymbolTable():
     def __init__(self):
         self.class_symbol_table = {}
         self.subroutine_symbol_table = {}
-        self.class_syombol_idx = 0
+        self.class_field_idx = 0
+        self.class_static_idx = 0
         self.subroutine_local_idx = 0
         self.subroutine_arg_idx = 0
 
@@ -32,10 +33,14 @@ class SymbolTable():
         self.subroutine_arg_idx = 0
 
     def define(self, name, _type, kind):
-        if kind in (const.FIELD, const.STATIC):
-            symbol = Symbol(_type, kind, self.class_syombol_idx)
+        if kind in (const.FIELD):
+            symbol = Symbol(_type, kind, self.class_field_idx)
             self.class_symbol_table[name] = symbol
-            self.class_syombol_idx += 1
+            self.class_field_idx += 1
+        elif kind in (const.STATIC):
+            symbol = Symbol(_type, kind, self.class_static_idx)
+            self.class_symbol_table[name] = symbol
+            self.class_static_idx += 1
         elif kind in (const.VAR):
             symbol = Symbol(_type, kind, self.subroutine_local_idx)
             self.subroutine_symbol_table[name] = symbol

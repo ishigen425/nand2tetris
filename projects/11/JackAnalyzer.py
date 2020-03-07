@@ -9,7 +9,7 @@ args = r"/home/ishigen/Documents/basic/nand2tetris/projects/11/"
 if os.path.isfile(args):
     file_list = [args]
 else:
-    file_list = glob.glob(args+"/**/*.jack")
+    file_list = glob.glob(args+"/**/*.jack", recursive=True)
 
 def second_stage_function(file_list):
     for file_path in file_list:
