@@ -302,16 +302,15 @@ class CompilationEngine():
                 self.compile_term()
             if self.jack_tokenizer.get_next_token() in ("["):
                 self.jack_tokenizer.advance()
-                
                 self.jack_tokenizer.advance()
                 self.compile_expression()
-                
+                self.vm_writer._write_line("add")
+                self.vm_writer.write_pop("pointer", 1)
+                self.vm_writer.write_push(const.THAT, 0)
             elif self.jack_tokenizer.get_next_token() in ("("):
                 self.jack_tokenizer.advance()
-                
                 self.jack_tokenizer.advance()
                 self.compile_expression_list()
-                
                 if function_name != "":
                     self.vm_writer.write_call(function_name, self.n_expression_list)
                     function_name = ""
@@ -370,24 +369,43 @@ class CompilationEngine():
 
     def _write_to_semicolon(self):
         '''
-            semicolonを描画したら処理終了
+            semicolonを描画したら処理終了(let 宣言)
         '''
+        is_contains_array = False
         while True:
             self.jack_tokenizer.advance()
             if self.jack_tokenizer.token_type() == const.IDENTIFIER:
                 var_name = self.jack_tokenizer.identifier()
             
-            if self.jack_tokenizer.token_type() == const.SYMBOL and self.jack_tokenizer.symbol() in ("=", "["):
+            if self.jack_tokenizer.token_type() == const.SYMBOL and self.jack_tokenizer.symbol() in ("="):
                 self.jack_tokenizer.advance()
                 self.compile_expression()
-                
+                # symbol_tableを見て、イコールの式をここでコンパイルする?
+                # 左辺に配列がある場合は、別の処理が必要になる
+                if is_contains_array:
+                    self.vm_writer.write_pop(const.TEMP, 0)
+                    self.vm_writer.write_pop("pointer", 1)
+                    self.vm_writer.write_push(const.TEMP, 0)
+                    self.vm_writer.write_pop(const.THAT, 0)
+                else:
+                    if self.symbol_table.kind_of(var_name) == const.VAR:
+                        self.vm_writer.write_pop(const.LOCAL, self.symbol_table.index_of(var_name))
+                    elif self.symbol_table.kind_of(var_name) == const.ARG:
+                        self.vm_writer.write_pop(const.ARGMENT, self.symbol_table.index_of(var_name))
+                    elif self.symbol_table.kind_of(var_name) == const.FIELD:
+                        self.vm_writer.write_pop(const.THIS, self.symbol_table.index_of(var_name))
+            elif self.jack_tokenizer.token_type() == const.SYMBOL and self.jack_tokenizer.symbol() in ("["):
+                is_contains_array = True
+                self.jack_tokenizer.advance()
+                self.compile_expression()
                 # symbol_tableを見て、イコールの式をここでコンパイルする?
                 if self.symbol_table.kind_of(var_name) == const.VAR:
-                    self.vm_writer.write_pop(const.LOCAL, self.symbol_table.index_of(var_name))
+                    self.vm_writer.write_push(const.LOCAL, self.symbol_table.index_of(var_name))
                 elif self.symbol_table.kind_of(var_name) == const.ARG:
-                    self.vm_writer.write_pop(const.ARGMENT, self.symbol_table.index_of(var_name))
+                    self.vm_writer.write_push(const.ARGMENT, self.symbol_table.index_of(var_name))
                 elif self.symbol_table.kind_of(var_name) == const.FIELD:
-                    self.vm_writer.write_pop(const.THIS, self.symbol_table.index_of(var_name))
+                    self.vm_writer.write_push(const.THIS, self.symbol_table.index_of(var_name))
+                self.vm_writer._write_line("add")
             if self.jack_tokenizer.token_type() == const.SYMBOL and self.jack_tokenizer.symbol() in ("("):
                 self.jack_tokenizer.advance()
                 self.compile_expression_list()
@@ -432,7 +450,7 @@ class CompilationEngine():
         elif option == "*":
             self.vm_writer.write_call("Math.multiply", 2)
         elif option == "/":
-            self.vm_writer.write_call("Math.Divide", 2)
+            self.vm_writer.write_call("Math.divide", 2)
         elif option == "&gt;":
             self.vm_writer._write_line("gt")
         elif option == "&lt;":
@@ -452,4 +470,7 @@ class CompilationEngine():
         length = len(self.jack_tokenizer.string_val())
         self.vm_writer.write_push(const.CONSTANT, length)
         self.vm_writer.write_call("String.new", 1)
+        for i in self.jack_tokenizer.string_val():
+            self.vm_writer.write_push(const.CONSTANT, ord(i))
+            self.vm_writer.write_call("String.appendChar", 2)
 
