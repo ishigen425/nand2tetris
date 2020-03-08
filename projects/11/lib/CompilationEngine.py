@@ -209,7 +209,6 @@ class CompilationEngine():
             self.compile_expression()
         else:
             self.vm_writer.write_push(const.CONSTANT, "0")
-        
         self.vm_writer.write_return()
         
 
@@ -272,6 +271,26 @@ class CompilationEngine():
         assert self.is_compiled_class
         function_name = []
         while True:
+            if self.jack_tokenizer.get_next_token() in ("["):
+                var_name = self.jack_tokenizer.identifier()
+                self.jack_tokenizer.advance()
+                self.jack_tokenizer.advance()
+                self.compile_expression()
+                if self.symbol_table.kind_of(var_name) == const.VAR:
+                    self.vm_writer.write_push(const.LOCAL, self.symbol_table.index_of(var_name))
+                    is_var = True
+                elif self.symbol_table.kind_of(var_name) == const.ARG:
+                    self.vm_writer.write_push(const.ARGMENT, self.symbol_table.index_of(var_name))
+                    is_var = True
+                elif self.symbol_table.kind_of(var_name) == const.FIELD:
+                    self.vm_writer.write_push(const.THIS, self.symbol_table.index_of(var_name))
+                    is_var = True
+                elif self.symbol_table.kind_of(var_name) == const.STATIC:
+                    self.vm_writer.write_push(const.STATIC, self.symbol_table.index_of(var_name))
+                    is_var = True
+                self.vm_writer._write_line("add")
+                self.vm_writer.write_pop("pointer", 1)
+                self.vm_writer.write_push(const.THAT, 0)
             is_var = False
             if self.jack_tokenizer.token_type() == const.INT_CONST:
                 self.vm_writer.write_push(const.CONSTANT, self.jack_tokenizer.int_val())
@@ -304,6 +323,8 @@ class CompilationEngine():
                     self.vm_writer.write_push(const.CONSTANT, 0)
                 elif self.jack_tokenizer.key_word() == "this":
                     self.vm_writer.write_push("pointer", 0)
+                elif self.jack_tokenizer.key_word() == "null":
+                    self.vm_writer.write_push(const.CONSTANT, 0)
             elif self.jack_tokenizer.token_type() == const.SYMBOL:
                 if self.jack_tokenizer.symbol() in ("("):
                     self.jack_tokenizer.advance()
@@ -314,14 +335,8 @@ class CompilationEngine():
             if self.jack_tokenizer.token_type() and const.SYMBOL and self.jack_tokenizer.symbol() in ("~","-"):
                 self.jack_tokenizer.advance()
                 self.compile_term()
-            if self.jack_tokenizer.get_next_token() in ("["):
-                self.jack_tokenizer.advance()
-                self.jack_tokenizer.advance()
-                self.compile_expression()
-                self.vm_writer._write_line("add")
-                self.vm_writer.write_pop("pointer", 1)
-                self.vm_writer.write_push(const.THAT, 0)
-            elif self.jack_tokenizer.get_next_token() in ("("):
+
+            if self.jack_tokenizer.get_next_token() in ("("):
                 self.jack_tokenizer.advance()
                 self.jack_tokenizer.advance()
                 self.compile_expression_list()
@@ -353,9 +368,7 @@ class CompilationEngine():
                 self.compile_expression()
                 if self.jack_tokenizer.token_type() == const.SYMBOL and self.jack_tokenizer.symbol() in ( ")", ";"):
                     break
-                
                 self.jack_tokenizer.advance()
-        
 
     def _write_line(self, value):
         self.output_file.write(value + "\n")
@@ -412,24 +425,6 @@ class CompilationEngine():
                 self.jack_tokenizer.advance()
                 self.compile_expression_list()
                 
-            if self.jack_tokenizer.token_type() == const.SYMBOL and self.jack_tokenizer.symbol() == ";":
-                return
-        
-    def _write_to_semicolon_for_not_expression(self):
-        '''
-            semicolonを描画したら処理終了(宣言用)
-        '''
-        self.jack_tokenizer.advance()
-        if self.jack_tokenizer.token_type() == const.KEYWORD:
-            _type = self.jack_tokenizer.key_word()
-        elif self.jack_tokenizer.token_type() == const.IDENTIFIER:
-            _type = self.jack_tokenizer.identifier()
-        
-        while True:
-            self.jack_tokenizer.advance()
-            if self.jack_tokenizer.token_type() == const.IDENTIFIER:
-                self.symbol_table.define(self.jack_tokenizer.identifier(), _type, "var")
-            
             if self.jack_tokenizer.token_type() == const.SYMBOL and self.jack_tokenizer.symbol() == ";":
                 return
 
