@@ -9,39 +9,134 @@
  * consists of 32,768 words, each holding a 16-bit binary number.
  */ 
 class Memory {
-
-    static Array FreeList;
-    static int HeapBase;
-    static int HeapLength;
-
-    static int LENGTH;
-    static int NEXT;
+    
+    // セグメントのリストの最初の場所を保持
+    // 二番目以降の要素に行くときは先頭からポインタをたどっていく
+    static int StartFreeSegment;
+    static int HEAP_START;
+    static int HEAP_END;
+    static Array Heap;
 
     /** Initializes the class. */
     function void init() {
-        let Memory = Array.new(32768);
+        let StartFreeSegment = 2048;
+        let Heap = 2048;
+        let HEAP_START = 2048;
+        let HEAP_END = 16383;
+        
+        let Heap[StartFreeSegment] = HEAP_END - HEAP_START;
+        // 最後の要素のポインタには-1を設定
+        let Heap[StartFreeSegment+1] = -1;
         return;
+    }
+
+    function int nextPointer(int address){
+        return Heap[address+1];
     }
 
     /** Returns the RAM value at the given address. */
     function int peek(int address) {
-        return Memory[address];
+        return Heap[address];
     }
 
     /** Sets the RAM value at the given address to the given value. */
     function void poke(int address, int value) {
-        let Memory[address] = value;
+        let Heap[address] = value;
         return;
     }
 
     /** Finds an available RAM block of the given size and returns
      *  a reference to its base address. */
     function int alloc(int size) {
-
+        var int test;
+        var int address;
+        var int blockSize;
+        var int nextAddress;
+        var int nextSize;
+        var int returnAddress;
+        var int length;
+        var boolean loop;
+        var int preAddress;
+        let address = StartFreeSegment;
+        let loop = true;
+        // FreeListLengthを順番に探索
+        let returnAddress = Memory.firstFit(size) + 1;
+        let nextAddress = Heap[returnAddress];
+        let length = Heap[returnAddress-1];
+        if(length - size > 10){
+            // 分割する
+            let Heap[returnAddress + size] = length - size;
+            let Heap[returnAddress + size + 1] = nextAddress;
+        }else{
+            // 一つ前のセグメントのポインタを変更する
+            // いまのセグメントが先頭の場合は、StartFreeSegmentを変更する
+            // 先頭から探索して一つ前のセグメントを割り出す
+            let preAddress = Memory.preSegment(returnAddress - 1);
+            if(preAddress = -1){
+                let StartFreeSegment = returnAddress - 1;
+            }else{
+                let Heap[preAddress+1] = nextAddress;
+            }
+        }
+        return returnAddress;
     }
 
     /** De-allocates the given object (cast as an array) by making
      *  it available for future allocations. */
     function void deAlloc(Array o) {
-    }    
+        var int length;
+        var int address;
+        var boolean loop;
+        var int tmpAddress;
+        let address = o;
+        let length = Heap[address-1];
+        let tmpAddress = StartFreeSegment;
+        while(loop){
+            if(Memory.nextPointer(tmpAddress) = -1){
+                let loop = false;
+            }else{
+                let tmpAddress = Memory.nextPointer(tmpAddress);
+            }
+        }
+        // tmpAddressが一番後ろのセグメントになるから、ここに空いたセグメントを連結する
+        let Heap[tmpAddress+1] = address - 1;
+        let Heap[address] = -1;
+        return;
+    }
+
+    // 空いているセグメントを探索する
+    function int firstFit(int size){
+        var int test;
+        var int address;
+        var int length;
+        let address = StartFreeSegment;
+        // FreeListLengthを順番に探索
+        while(~(address = -1)){
+            let length = Heap[address+1];
+            if(~(length < size)){
+                return address;
+            }
+            let address = Memory.nextPointer(address);
+        }
+        return null;
+    }
+
+    function int preSegment(int targetAddress){
+        var int test;
+        var int address;
+        var int length;
+        var int preAddress;
+        let address = StartFreeSegment;
+        let preAddress = -1;
+        // FreeListLengthを順番に探索
+        while(~(address = -1)){
+            let length = Heap[address+1];
+            if(address = targetAddress){
+                return preAddress;
+            }
+            let preAddress = address;
+            let address = Memory.nextPointer(address);
+        }
+        return null;
+    }
 }
