@@ -11,33 +11,355 @@
  */
 class Screen {
 
+    static Array Memory;
+    static boolean isColor;
+
     /** Initializes the Screen. */
     function void init() {
+        let Memory = 16384;
+        let isColor = true;
+        return;
     }
 
     /** Erases the entire screen. */
     function void clearScreen() {
+        return;
     }
 
     /** Sets the current color, to be used for all subsequent drawXXX commands.
      *  Black is represented by true, white by false. */
     function void setColor(boolean b) {
+        let isColor = b;
+        return;
     }
 
     /** Draws the (x,y) pixel, using the current color. */
     function void drawPixel(int x, int y) {
+        var int test;
+        var int address;
+        var int counter;
+        var int pixel;
+        var int mod;
+        var int flg;
+
+        let address = (y * 32) + (x/16);
+        let mod = x - (x / 16 * 16);
+        let pixel = 1;
+        let counter = 1;
+
+        while((counter - 1) < mod){
+            let pixel = pixel + pixel;
+            let counter = counter + 1;
+        }
+        // let test = 7777;
+        let flg = Memory[address] & pixel;
+        if(flg = 0){
+            let Memory[address] = Memory[address] + pixel;
+        }
+        return;
     }
 
     /** Draws a line from pixel (x1,y1) to pixel (x2,y2), using the current color. */
     function void drawLine(int x1, int y1, int x2, int y2) {
+        var int test;
+        var int counter;
+        var int a;
+        var int b;
+        var int dx;
+        var int dy;
+        var int adyMinusbdx;
+        let a = 0;
+        let b = 0;
+        let dx = x2 - x1;
+        let dy = y2 - y1;
+        let adyMinusbdx = dx - dy;
+        let counter = 0;
+        if((dx = 0) | (dy = 0)){
+            if(dx = 0){
+                // 垂直線
+                if(dy > 0){
+                    while(b < dy){
+                        do Screen.drawPixel(x1+a, y1+b);
+                        let b = b + 1;
+                    }
+                }else{
+                    while(b < -dy){
+                        do Screen.drawPixel(x1-a, y1-b);
+                        let b = b + 1;
+                    }
+                }
+                
+            }else{
+                // 水平線
+                if(dx > 0){
+                    while(a < dx){
+                        do Screen.drawPixel(x1+a, y1+b);
+                        let a = a + 1;
+                    }
+                }else{
+                    while(a < -dx){
+                        do Screen.drawPixel(x1-a, y1-b);
+                        let a = a + 1;
+                    }
+                }
+            }
+        }else{
+            if((dx * dy) > 0){
+                if((dx + dy) > 0){
+                    // dx, dy > 0
+                    while(counter < (dx+dy)){
+                        do Screen.drawPixel(x1+a, y1+b);
+                        if(adyMinusbdx < 0){
+                            let a = a + 1;
+                            let adyMinusbdx = adyMinusbdx + dy;
+                        }else{
+                            let b = b + 1;
+                            let adyMinusbdx = adyMinusbdx - dx;
+                        }
+                        let counter = counter + 1;
+                    }
+                }else{
+                    // dx, dy < 0
+                    while(counter < -(dx+dy)){
+                        do Screen.drawPixel(x1-a, y1-b);
+                        if(adyMinusbdx > 0){
+                            let a = a + 1;
+                            let adyMinusbdx = adyMinusbdx + dy;
+                        }else{
+                            let b = b + 1;
+                            let adyMinusbdx = adyMinusbdx - dx;
+                        }
+                        let counter = counter + 1;
+                    }
+                }
+            }else{
+                // dx < 0 or dy < 0
+                if(dx < 0){
+                    let adyMinusbdx = dx;
+                    while(counter < (Math.abs(dx)+Math.abs(dy))){
+                        do Screen.drawPixel(x1-a, y1+b);
+                        if(adyMinusbdx < 0){
+                            let a = a + 1;
+                            let adyMinusbdx = adyMinusbdx + dy;
+                        }else{
+                            let b = b + 1;
+                            let adyMinusbdx = adyMinusbdx + dx;
+                        }
+                        let counter = counter + 1;
+                    }
+                }else{
+                    let adyMinusbdx = dx;
+                    while(counter < (Math.abs(dx)+Math.abs(dy))){
+                        do Screen.drawPixel(x1+a, y1-b);
+                        if(adyMinusbdx > 0){
+                            let a = a + 1;
+                            let adyMinusbdx = adyMinusbdx + dy;
+                        }else{
+                            let b = b + 1;
+                            let adyMinusbdx = adyMinusbdx + dx;
+                        }
+                        let counter = counter + 1;
+                    }
+                }
+            }
+        }
+        return;
     }
 
     /** Draws a filled rectangle whose top left corner is (x1, y1)
      * and bottom right corner is (x2,y2), using the current color. */
     function void drawRectangle(int x1, int y1, int x2, int y2) {
+        var int test;
+        var int counter;
+        var int dy;
+        let dy = y2 - y1;
+        let counter = 0;
+        if(isColor){
+            while(counter < dy){
+                do Screen.drawLine(x1, y1+counter, x2, y1+counter);
+                let counter = counter + 1;
+            }
+        }else{
+            while(counter < dy){
+                do Screen.clearLine(x1, y1+counter, x2, y1+counter);
+                let counter = counter + 1;
+            }
+            do Screen.drawLine(x1, y1, x2, y1);
+            do Screen.drawLine(x1, y1, x1, y2);
+            do Screen.drawLine(x2, y1, x2, y2);
+            do Screen.drawLine(x1, y2, x2, y2);
+        }
+        
+        
+        return;
     }
 
     /** Draws a filled circle of radius r<=181 around (x,y), using the current color. */
     function void drawCircle(int x, int y, int r) {
+        var int test;
+        var int dy;
+        var int counter;
+        var int end;
+        var int squareR;
+        var int squareDy;
+        var int tmp;
+        var Array rList;
+        let rList = Array.new(r+1);
+        let counter = 0;
+        let squareR = r * r;
+        while(counter < (r+1)){
+            let tmp = counter * counter;
+            let rList[counter] = Math.sqrt(squareR - tmp);
+            let counter = counter + 1;
+        }
+        let end = 2 * r;
+        let dy = 0;
+        let counter = 0;
+        while(counter < end){
+            let dy = counter - r;
+            let tmp = rList[Math.abs(dy)];
+            if(isColor){
+                do Screen.drawLine(x-tmp, y+dy, x+tmp, y+dy);
+            }else{
+                do Screen.clearLine(x-tmp, y+dy, x+tmp, y+dy);
+                do Screen.drawLine(x-tmp, y+dy, x-tmp, y+dy);
+                do Screen.drawLine(x+tmp, y+dy, x+tmp, y+dy);
+            }
+            
+            let counter = counter + 1;
+        }
+        return;
+    }
+
+    /** Draws the (x,y) pixel, using the current color. */
+    function void clearPixel(int x, int y) {
+        var int test;
+        var int address;
+        var int counter;
+        var int pixel;
+        var int mod;
+        var int flg;
+
+        let address = (y * 32) + (x/16);
+        let mod = x - (x / 16 * 16);
+        let pixel = 1;
+        let counter = 1;
+
+        while((counter - 1) < mod){
+            let pixel = pixel + pixel;
+            let counter = counter + 1;
+        }
+        let flg = Memory[address] & pixel;
+        if(~(flg = 0)){
+            let Memory[address] = Memory[address] & (~pixel);
+        }
+        return;
+    }
+
+    /** Draws a line from pixel (x1,y1) to pixel (x2,y2), using the current color. */
+    function void clearLine(int x1, int y1, int x2, int y2) {
+        var int test;
+        var int counter;
+        var int a;
+        var int b;
+        var int dx;
+        var int dy;
+        var int adyMinusbdx;
+        let a = 0;
+        let b = 0;
+        let dx = x2 - x1;
+        let dy = y2 - y1;
+        let adyMinusbdx = dx - dy;
+        let counter = 0;
+        if((dx = 0) | (dy = 0)){
+            if(dx = 0){
+                // 垂直線
+                if(dy > 0){
+                    while(b < dy){
+                        do Screen.clearPixel(x1+a, y1+b);
+                        let b = b + 1;
+                    }
+                }else{
+                    while(b < -dy){
+                        do Screen.clearPixel(x1-a, y1-b);
+                        let b = b + 1;
+                    }
+                }
+                
+            }else{
+                // 水平線
+                if(dx > 0){
+                    while(a < dx){
+                        do Screen.clearPixel(x1+a, y1+b);
+                        let a = a + 1;
+                    }
+                }else{
+                    while(a < -dx){
+                        do Screen.clearPixel(x1-a, y1-b);
+                        let a = a + 1;
+                    }
+                }
+            }
+        }else{
+            if((dx * dy) > 0){
+                if((dx + dy) > 0){
+                    // dx, dy > 0
+                    while(counter < (dx+dy)){
+                        do Screen.clearPixel(x1+a, y1+b);
+                        if(adyMinusbdx < 0){
+                            let a = a + 1;
+                            let adyMinusbdx = adyMinusbdx + dy;
+                        }else{
+                            let b = b + 1;
+                            let adyMinusbdx = adyMinusbdx - dx;
+                        }
+                        let counter = counter + 1;
+                    }
+                }else{
+                    // dx, dy < 0
+                    while(counter < -(dx+dy)){
+                        do Screen.clearPixel(x1-a, y1-b);
+                        if(adyMinusbdx > 0){
+                            let a = a + 1;
+                            let adyMinusbdx = adyMinusbdx + dy;
+                        }else{
+                            let b = b + 1;
+                            let adyMinusbdx = adyMinusbdx - dx;
+                        }
+                        let counter = counter + 1;
+                    }
+                }
+            }else{
+                // dx < 0 or dy < 0
+                if(dx < 0){
+                    let adyMinusbdx = dx;
+                    while(counter < (Math.abs(dx)+Math.abs(dy))){
+                        do Screen.clearPixel(x1-a, y1+b);
+                        if(adyMinusbdx < 0){
+                            let a = a + 1;
+                            let adyMinusbdx = adyMinusbdx + dy;
+                        }else{
+                            let b = b + 1;
+                            let adyMinusbdx = adyMinusbdx + dx;
+                        }
+                        let counter = counter + 1;
+                    }
+                }else{
+                    let adyMinusbdx = dx;
+                    while(counter < (Math.abs(dx)+Math.abs(dy))){
+                        do Screen.clearPixel(x1+a, y1-b);
+                        if(adyMinusbdx > 0){
+                            let a = a + 1;
+                            let adyMinusbdx = adyMinusbdx + dy;
+                        }else{
+                            let b = b + 1;
+                            let adyMinusbdx = adyMinusbdx + dx;
+                        }
+                        let counter = counter + 1;
+                    }
+                }
+            }
+        }
+        return;
     }
 }
